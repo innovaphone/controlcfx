@@ -1,0 +1,282 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<voicemail>
+<!-- innovaphone Voice Follow me == inno srl V1.02 KWA 2009 -->
+<!-- Wellcome + user  -->
+	<function define="Wellcome">  
+		<assign out="$Teiln" value="" /> 
+  		<assign out="$Teiln-ok" value="false" /> 
+		 <event type="dtmf" block="false">
+		  	<assign out="$Teiln-timeout" value="false" /> 
+  		 	<pbx-getdtmfdigit out-dtmf="$dtmf" /> 
+			<switch var="$dtmf">
+				<case equal="#">
+  				<assign out="$Teiln-ok" value="true" /> 
+  				<return /> 
+				</case>
+ 			 </switch>
+  			 <lib-strcat string="$Teiln" string2="$dtmf" out-string="$Teiln" /> 
+  		 </event>
+		<store-get root="" name="welcome.$coder" out-url="$ctrl" /> 
+        	<pbx-prompt url="$ctrl" /> 
+		<store-get root="" name="Teilnehmer_Raute.$coder" out-url="$ctrl" /> 
+        	<pbx-prompt url="$ctrl" /> 
+		<while notcond="$Teiln-ok">
+  			<store-get root="" name="silence.$coder" out-url="$ctrl" /> 
+  			<assign out="$Teiln-timeout" value="true" /> 
+  			<pbx-prompt url="$ctrl" sec="4" repeat="true" /> 
+			<if cond="$Teiln-timeout">
+				<assign out="$Teiln" value="" /> 
+				<store-get root="" name="Teilnehmer_Raute.$coder" out-url="$ctrl" /> 
+				<pbx-prompt url="$ctrl" /> 
+			</if>
+  		</while>
+		<!-- user in PBX?  -->
+		<pbx-finduser-e164 e164="$Teiln" out-cn="$cn"/> 
+		<assign out="$Teiln-exist" value="$cn" />
+		<if notcond="$Teiln-exist">
+			<store-get root="" name="nicht_registriert.$coder" out-url="$ctrl" /> 
+			<pbx-prompt url="$ctrl" /> 
+			<pbx-disc/>
+		</if>
+	<!-- user has PIN?  -->
+		<lib-strcat string="$Teiln" string2="_PIN.txt" out-string="$File" /> 
+		<store-cookie root="" name="$File" out="$readpin"/>
+		<lib-strlen string="$readpin" out="$len-readpin" />
+		<switch var="$len-readpin">
+			<case not-equal="4">
+			        <pbx-getcallinfo out-cgpn="$cgpn" out-cdpn="$cdpn" out-leg2="$leg2" /> 
+				<switch var="$Teiln">
+	<!-- no PIN but user/extension the same?  -->
+					<case equal="$cgpn">
+						<assign out="$Admin" value="True" />
+						<store-get root="" name="PIN_input.$coder" out-url="$ctrl" /> 
+						<pbx-prompt url="$ctrl" />
+						<call name="inputPIN" /> 
+							<switch var="$pin">
+							<case equal="">
+								<store-get root="" name="tngesp.$coder" out-url="$ctrl" /> 
+								<pbx-prompt url="$ctrl" /> 
+							</case>
+							<default>
+								<store-get root="" name="PIN_out.$coder" out-url="$ctrl" /> 
+								<pbx-prompt url="$ctrl" /> 
+								<assign out="$string" value="$pin" />
+								<call name="PromptString" /> 
+							</default>
+ 						</switch>
+						<store-cookie root="" name="$File" value="$pin"/> 
+					
+					</case>
+  					<default>
+	<!-- no PIN  -->
+  						<store-get root="" name="kein_PIN.$coder" out-url="$ctrl" /> 
+						<pbx-prompt url="$ctrl" /> 
+						<store-get root="" name="nurnst.$coder" out-url="$ctrl" /> 
+						<pbx-prompt url="$ctrl" /> 
+						<pbx-disc/>
+  					</default>
+				</switch>
+  			</case>
+ 			<case equal="4">
+				<call name="inputPIN" />
+				<assign out="$Admin" value="True" />
+                        	<switch var="$readpin">		
+				<case not-equal="$pin">
+					<store-get root="" name="PIN_ungultig.$coder" out-url="$ctrl" /> 
+					<pbx-prompt url="$ctrl" />
+					<pbx-disc/>
+				</case>
+				</switch>
+			</case>
+		</switch>
+	</function>
+<!-- Pin Input  -->
+ 	<function define="inputPIN">
+		<assign out="$pin-ok" value="false" /> 
+		<assign out="$pin" value="" />
+		<event type="dtmf" block="false">
+		  <assign out="$pin-timeout" value="false" /> 
+		  <pbx-getdtmfdigit out-dtmf="$dtmf" /> 
+		  <lib-strcat string="$pin" string2="$dtmf" out-string="$pin" /> 
+		  <lib-strlen string="$pin" out="$len-pin" />
+		  <switch var="$len-pin">
+			<case equal="4">
+		        <assign out="$pin-ok" value="true" /> 
+                        </case>
+		  </switch>
+	        </event>
+  		<store-get root="" name="PIN.$coder" out-url="$ctrl" /> 
+		<pbx-prompt url="$ctrl" />
+		<while notcond="$pin-ok">
+			<store-get root="" name="silence.$coder" out-url="$ctrl" /> 
+			<assign out="$pin-timeout" value="true" /> 
+		        <pbx-prompt url="$ctrl" sec="4" repeat="true" /> 
+			<if cond="$pin-ok">
+				<switch var="$pin">
+					<case equal="####">
+		        			<assign out="$pin" value="" /> 
+                        		</case>
+		  		</switch>
+				<return /> 
+  			</if>
+			<if cond="$pin-timeout">
+		  		<store-get root="" name="PIN.$coder" out-url="$ctrl" /> 
+		  		<pbx-prompt url="$ctrl" /> 
+  			</if>
+  		</while>
+	</function> 
+	<function define="PromptString">
+  		<assign out="$i" value="1" /> 
+  		<assign out="$c" value="" /> 
+  		<index value="$string" pos="$i" size="1" out="$c" /> 
+  		<lib-strlen string="$c" out="$len-c" /> 
+		<while cond="$len-c">
+			<switch var="$c">
+			<case equal="*">
+  				<assign out="$filename" value="_star.$coder" /> 
+  			</case>
+			<case equal="#">
+  				<assign out="$filename" value="_hash.$coder" /> 
+  			</case>
+			<default>
+  				<lib-strcat string="_" string2="$c" out-string="$ctrl" /> 
+  				<lib-strcat string="$ctrl" string2=".$coder" out-string="$filename" /> 
+  			</default>
+  			</switch>
+  			<store-get root="" name="$filename" out-url="$ctrl" /> 
+  			<pbx-prompt url="$ctrl" barge-in="false" /> 
+  			<add value="$i" value2="1" out="$i" /> 
+  			<assign out="$c" value="" /> 
+  			<index value="$string" pos="$i" size="1" out="$c" /> 
+  			<lib-strlen string="$c" out="$len-c" /> 
+  			</while>
+  	</function>
+
+	<function define="readCFW">
+		<store-get root="" name="derTeilnehmer.$coder" out-url="$ctrl" /> 
+		<pbx-prompt url="$ctrl" /> 
+  		<assign out="$string" value="$Teiln" />
+		<call name="PromptString" />
+		<pbx-query-obj name="$cn" type="cfu" out="$to" />
+		<if notcond="$to">	
+			<store-get root="" name="kFesteARU.$coder" out-url="$ctrl" /> 
+			<pbx-prompt url="$ctrl" />
+			<return />
+		</if>	
+		<store-get root="" name="umgeleitet.$coder" out-url="$ctrl" /> 
+		<pbx-prompt url="$ctrl" /> 
+		<assign out="$string" value="$to" />
+		<call name="PromptString" /> 
+	</function>
+	<function define="setCFW">
+		<assign out="$cfw" value="" />
+		<assign out="$done-ok" value="False" />
+		<event type="dtmf" block="false">
+		  <assign out="$cfw-timeout" value="false" /> 
+		  <pbx-getdtmfdigit out-dtmf="$dtmf" /> 
+		  <switch var="$dtmf">
+			<case equal="#">
+		       		<pbx-upd-obj name="$cn" type="cfu" value="$cfw" /> 
+				<lib-strcat string="$Teiln" string2="_CFW.txt" out-string="$File" /> 
+				<store-cookie root="" name="$File" value="$cfw"/>
+    				<assign out="$done-ok" value="true" />
+				<return />
+                        </case>
+		  </switch>
+		<lib-strcat string="$cfw" string2="$dtmf" out-string="$cfw" /> 
+	        </event>
+  		<store-get root="" name="Target.$coder" out-url="$ctrl" /> 
+		<pbx-prompt url="$ctrl" />
+		<while notcond="$done-ok">
+			<store-get root="" name="silence.$coder" out-url="$ctrl" /> 
+			<assign out="$cfw-timeout" value="true" /> 
+		        <pbx-prompt url="$ctrl" sec="4" repeat="true" /> 
+			<if cond="$cfw-timeout">
+		  		<store-get root="" name="Target.$coder" out-url="$ctrl" /> 
+		  		<pbx-prompt url="$ctrl" /> 
+  			</if>
+  		</while>
+		<return />
+	</function>
+	<function define="CFWclr">
+		<assign out="$done-ok" value="False" />
+		<while notcond="$done-ok">
+			<pbx-upd-obj name="$cn" type="cfu" value="" />
+			<pbx-query-obj name="$cn" type="cfu" out="$to" />
+			<if notcond="$to">	
+				<assign out="$done-ok" value="True" />
+			</if>	
+		</while>
+	</function>			
+<!-- Main routine  -->
+	<function define="Main">
+		<event type="timer" name="vbguard">
+  		  		<pbx-disc /> 
+  		</event>
+		<timer name="vbguard" sec="60" />
+		<assign out="$Admin" value="False" />
+		<call name="wellcome" /> 
+		<assign out="$menu-ok" value="false" /> 
+		<event type="dtmf" block="false">
+			<timer name="vbguard" sec="60" />
+			<assign out="$Teiln-timeout" value="false" /> 
+  		 	<pbx-getdtmfdigit out-dtmf="$dtmf" /> 
+			<switch var="$dtmf">
+				<case equal="1">
+  					<call name="setCFW" />
+					<call name="readCFW" />
+				</case>
+				<case equal="2">
+  					<call name="readCFW" /> 
+				</case>
+				<case equal="3">
+  					<call name="CFWclr" /> 
+					<call name="readCFW" />
+				</case>
+				<case equal="4">
+  					<if cond="$Admin">
+						<store-get root="" name="PIN_input.$coder" out-url="$ctrl" /> 
+						<pbx-prompt url="$ctrl" /> 
+						<call name="inputPIN" /> 
+						<assign out="$string" value="$pin" />
+						<store-cookie root="" name="$File" value="$pin"/>
+						<switch var="$pin">
+							<case equal="">
+								<store-get root="" name="tngesp.$coder" out-url="$ctrl" /> 
+								<pbx-prompt url="$ctrl" /> 
+								<pbx-disc/>
+							</case>
+							<default>
+								<store-get root="" name="PIN_out.$coder" out-url="$ctrl" /> 
+								<pbx-prompt url="$ctrl" /> 
+								<call name="PromptString" /> 
+							</default>
+ 						</switch>
+					</if>
+				</case>
+				<case equal="5">
+					<lib-strcat string="$Teiln" string2="_CFW.txt" out-string="$File" /> 
+					<store-cookie root="" name="$File" out="$cfw"/>
+    					<call name="CFWclr" /> 
+ 					<pbx-upd-obj name="$cn" type="cfu" value="$cfw" /> 
+					<call name="readCFW" />
+				</case>
+ 			 </switch>
+  		</event>
+ 		<store-get root="" name="MMenu.$coder" out-url="$ctrl" /> 
+		<pbx-prompt url="$ctrl" /> 
+		<store-get root="" name="MMenu2.$coder" out-url="$ctrl" /> 
+		<pbx-prompt url="$ctrl" /> 
+		<while notcond="$menu-ok">
+  			<store-get root="" name="silence.$coder" out-url="$ctrl" /> 
+  			<assign out="$Teiln-timeout" value="true" /> 
+  			<pbx-prompt url="$ctrl" sec="4" repeat="true" /> 
+			<if cond="$Teiln-timeout">
+				<store-get root="" name="MMenu.$coder" out-url="$ctrl" /> 
+				<pbx-prompt url="$ctrl" /> 
+			</if>
+  		</while>
+	 <pbx-disc/>
+      </function>    
+</voicemail>
+<!-- Control Call Forward wiki-src/xml/ControlCFx 1,0,1,0 (C) innovaphone AG 2010-2010 -->

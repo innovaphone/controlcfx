@@ -133,13 +133,13 @@
 		<while cond="$len-c">
 			<switch var="$c">
 			<case equal="*">
-  				<assign out="$filename" value="de_star.$coder" /> 
+  				<assign out="$filename" value="no_star.$coder" /> 
   			</case>
 			<case equal="#">
-  				<assign out="$filename" value="de_hash.$coder" /> 
+  				<assign out="$filename" value="no_hash.$coder" /> 
   			</case>
 			<default>
-  				<lib-strcat string="de_" string2="$c" out-string="$ctrl" /> 
+  				<lib-strcat string="no_" string2="$c" out-string="$ctrl" /> 
   				<lib-strcat string="$ctrl" string2=".$coder" out-string="$filename" /> 
   			</default>
   			</switch>
@@ -278,4 +278,4 @@
 	 <pbx-disc/>
       </function>    
 </voicemail>
-<!-- Control Call Forward wiki-src/xml/ControlCFx 1,0,2,0 (C) innovaphone AG 2010-2011 -->
+<!-- Control Call Forward wiki-src/xml/ControlCFx 1,0,1,0 (C) innovaphone AG 2010-2010 -->
